@@ -1,0 +1,70 @@
+import boto3
+import time
+from elasticsearch import Elasticsearch
+from elasticsearch.helpers import bulk
+
+# AWS S3 Configuration
+s3_client = boto3.client('s3')
+bucket_name = 'your-bucket-name'
+log_file_key = 'path/to/your/logfile.log'
+
+# Elasticsearch Configuration
+es = Elasticsearch(['http://your-elasticsearch-url:9200'])
+index_name = 'logs-index'
+
+# Position tracking file
+position_file = 'last_position.txt'
+
+def get_last_position():
+    try:
+        with open(position_file, 'r') as f:
+            return int(f.read().strip())
+    except FileNotFoundError:
+        return 0
+
+def update_last_position(position):
+    with open(position_file, 'w') as f:
+        f.write(str(position))
+
+def read_incremental_logs():
+    last_position = get_last_position()
+    
+    # Get the object metadata to find the file size
+    response = s3_client.head_object(Bucket=bucket_name, Key=log_file_key)
+    file_size = response['ContentLength']
+    
+    # If the file has shrunk (e.g., log rotation), reset the position
+    if last_position > file_size:
+        last_position = 0
+    
+    # Read the new logs
+    response = s3_client.get_object(Bucket=bucket_name, Key=log_file_key, Range=f'bytes={last_position}-{file_size-1}')
+    log_data = response['Body'].read().decode('utf-8')
+    
+    if log_data:
+        new_position = last_position + len(log_data)
+        update_last_position(new_position)
+    
+    return log_data.splitlines()
+
+def push_logs_to_elasticsearch(log_lines):
+    actions = [
+        {
+            "_index": index_name,
+            "_source": {"message": line, "timestamp": time.time()}
+        }
+        for line in log_lines
+    ]
+    
+    if actions:
+        bulk(es, actions)
+
+def main():
+    while True:
+        log_lines = read_incremental_logs()
+        if log_lines:
+            push_logs_to_elasticsearch(log_lines)
+        time.sleep(10)  # Sleep for a while before checking for new logs
+
+if __name__ == '__main__':
+    main()
