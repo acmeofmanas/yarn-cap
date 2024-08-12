@@ -1,0 +1,146 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2761
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 import os\
+\
+# Set environment variables\
+os.environ['ES_HOST'] = 'https://your-elasticsearch-host:9200'\
+os.environ['ES_USER'] = 'your-username'\
+os.environ['ES_PASSWORD'] = 'your-password'\
+\
+print("Environment variables set successfully.")\
+\
+# S3 Configuration\
+bucket_name = 'your-bucket-name'\
+file_key = 'path/to/your/logfile.log'\
+\
+# Elasticsearch Configuration\
+es_host = os.environ.get('ES_HOST')\
+es_user = os.environ.get('ES_USER')\
+es_password = os.environ.get('ES_PASSWORD')\
+index_name = 'your-log-index'\
+\
+# File to store the last processed position\
+state_file = 'last_processed_position.txt'\
+\
+# Verify Elasticsearch credentials\
+if not all([es_host, es_user, es_password]):\
+    raise ValueError("Elasticsearch credentials not properly set in environment variables.")\
+\
+# Initialize S3 and Elasticsearch clients\
+s3 = boto3.client('s3')\
+es = Elasticsearch(\
+    [es_host],\
+    http_auth=(es_user, es_password),\
+    scheme="https",\
+    port=9200,\
+    verify_certs=False  # Set to True in production and provide proper certificates\
+)\
+\
+print("Configuration loaded successfully.")\
+\
+\
+from getpass import getpass\
+\
+# Prompt for sensitive information\
+os.environ['ES_HOST'] = input("Enter Elasticsearch host URL: ")\
+os.environ['ES_USER'] = input("Enter Elasticsearch username: ")\
+os.environ['ES_PASSWORD'] = getpass("Enter Elasticsearch password: ")\
+\
+print("Environment variables set successfully.")\
+\
+\
+\
+\
+\{\
+ "cells": [\
+  \{\
+   "cell_type": "markdown",\
+   "metadata": \{\},\
+   "source": [\
+    "# S3 Log File Processing and Elasticsearch Ingestion\\n",\
+    "\\n",\
+    "This notebook demonstrates how to:\\n",\
+    "1. Read an incremental log file from S3\\n",\
+    "2. Process and transform the data\\n",\
+    "3. Push the processed data to Elasticsearch"\
+   ]\
+  \},\
+  \{\
+   "cell_type": "code",\
+   "execution_count": null,\
+   "metadata": \{\},\
+   "outputs": [],\
+   "source": [\
+    "import os\\n",\
+    "from getpass import getpass\\n",\
+    "\\n",\
+    "# Prompt for sensitive information\\n",\
+    "os.environ['ES_HOST'] = input(\\"Enter Elasticsearch host URL: \\")\\n",\
+    "os.environ['ES_USER'] = input(\\"Enter Elasticsearch username: \\")\\n",\
+    "os.environ['ES_PASSWORD'] = getpass(\\"Enter Elasticsearch password: \\")\\n",\
+    "\\n",\
+    "print(\\"Environment variables set successfully.\\")"\
+   ]\
+  \},\
+  \{\
+   "cell_type": "code",\
+   "execution_count": null,\
+   "metadata": \{\},\
+   "outputs": [],\
+   "source": [\
+    "import boto3\\n",\
+    "import json\\n",\
+    "from elasticsearch import Elasticsearch\\n",\
+    "from datetime import datetime\\n",\
+    "from urllib3.exceptions import InsecureRequestWarning\\n",\
+    "import urllib3\\n",\
+    "\\n",\
+    "# Suppress InsecureRequestWarning\\n",\
+    "urllib3.disable_warnings(InsecureRequestWarning)"\
+   ]\
+  \},\
+  \{\
+   "cell_type": "code",\
+   "execution_count": null,\
+   "metadata": \{\},\
+   "outputs": [],\
+   "source": [\
+    "# S3 Configuration\\n",\
+    "bucket_name = 'your-bucket-name'\\n",\
+    "file_key = 'path/to/your/logfile.log'\\n",\
+    "\\n",\
+    "# Elasticsearch Configuration\\n",\
+    "es_host = os.environ.get('ES_HOST')\\n",\
+    "es_user = os.environ.get('ES_USER')\\n",\
+    "es_password = os.environ.get('ES_PASSWORD')\\n",\
+    "index_name = 'your-log-index'\\n",\
+    "\\n",\
+    "# File to store the last processed position\\n",\
+    "state_file = 'last_processed_position.txt'\\n",\
+    "\\n",\
+    "# Verify Elasticsearch credentials\\n",\
+    "if not all([es_host, es_user, es_password]):\\n",\
+    "    raise ValueError(\\"Elasticsearch credentials not properly set in environment variables.\\")\\n",\
+    "\\n",\
+    "# Initialize S3 and Elasticsearch clients\\n",\
+    "s3 = boto3.client('s3')\\n",\
+    "es = Elasticsearch(\\n",\
+    "    [es_host],\\n",\
+    "    http_auth=(es_user, es_password),\\n",\
+    "    scheme=\\"https\\",\\n",\
+    "    port=9200,\\n",\
+    "    verify_certs=False  # Set to True in production and provide proper certificates\\n",\
+    ")\\n",\
+    "\\n",\
+    "print(\\"Configuration loaded successfully.\\")"\
+   ]\
+  \},\
+  # ... rest of your notebook ...\
+ ],\
+ # ... metadata ...\
+\}}
