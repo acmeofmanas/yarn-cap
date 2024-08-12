@@ -1,0 +1,62 @@
+import boto3
+import json
+from elasticsearch import Elasticsearch
+from datetime import datetime
+
+# AWS S3 Configuration
+s3 = boto3.client('s3')
+bucket_name = 'your-bucket-name'
+file_key = 'path/to/your/logfile.log'
+
+# Elasticsearch Configuration
+es = Elasticsearch(['http://localhost:9200'])  # Replace with your Elasticsearch host
+index_name = 'your-log-index'
+
+# File to store the last processed position
+state_file = 'last_processed_position.txt'
+
+def get_last_position():
+    try:
+        with open(state_file, 'r') as f:
+            return int(f.read().strip())
+    except FileNotFoundError:
+        return 0
+
+def save_last_position(position):
+    with open(state_file, 'w') as f:
+        f.write(str(position))
+
+def process_logs():
+    last_position = get_last_position()
+    
+    # Get the file metadata
+    response = s3.head_object(Bucket=bucket_name, Key=file_key)
+    file_size = response['ContentLength']
+    
+    if last_position >= file_size:
+        print("No new data to process")
+        return
+    
+    # Read only the new part of the file
+    response = s3.get_object(Bucket=bucket_name, Key=file_key, Range=f'bytes={last_position}-{file_size}')
+    new_content = response['Body'].read().decode('utf-8')
+    
+    # Process new lines
+    for line in new_content.splitlines():
+        try:
+            log_entry = json.loads(line)
+            # Add a timestamp if not present
+            if 'timestamp' not in log_entry:
+                log_entry['timestamp'] = datetime.now().isoformat()
+            # Index the log entry
+            es.index(index=index_name, body=log_entry)
+        except json.JSONDecodeError:
+            print(f"Skipping invalid JSON: {line}")
+    
+    # Update the last processed position
+    save_last_position(file_size)
+    
+    print(f"Processed {file_size - last_position} bytes of new log data")
+
+# Run the log processing
+process_logs()
